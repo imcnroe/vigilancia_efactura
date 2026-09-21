@@ -51,8 +51,15 @@ visita.
   trata datos personales.
 - Se identifica siempre con un `User-Agent` propio y con un contacto.
 
-**Para que pare.** Escribe a la dirección de contacto del `User-Agent` y se para. No hace
-falta bloquear nada: eso es exactamente para lo que está puesta ahí.
+**Para que pare.** Escribe a **imcnroe@hotmail.com** y se para. No hace falta bloquear
+nada, ni tener cuenta de GitHub, ni justificar el motivo: la dirección está ahí
+precisamente para eso. Basta con decir qué servidor y se deja de consultar.
+
+**El `User-Agent` completo**, por si lo estás buscando en tus registros:
+
+```
+regwatch/0.1 (proyecto de I+D personal; +https://github.com/imcnroe/vigilancia_efactura; imcnroe@hotmail.com)
+```
 
 ---
 

@@ -75,14 +75,45 @@ fuente activa apuntando a ellos.
 
 ---
 
+## Los valores de hoy, para copiar en el correo
+
+Comprobados el 21 de septiembre de 2026. Si cambian, actualiza esta sección **y** el
+[README](../../README.md), porque el correo declara que coinciden.
+
+**`User-Agent` exacto:**
+
+```
+regwatch/0.1 (proyecto de I+D personal; +https://github.com/imcnroe/vigilancia_efactura; imcnroe@hotmail.com)
+```
+
+**Volumen:** 7 peticiones al día. 5 a `www.facturae.gob.es`, 2 a
+`sede.agenciatributaria.gob.es`.
+
+**URL que consulta en `sede.agenciatributaria.gob.es`**, para el correo a la AEAT:
+
+```
+https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/informacion-tecnica/esquemas.html
+https://sede.agenciatributaria.gob.es/static_files/AEAT_Desarrolladores/EEDD/IVA/VERI-FACTU/FAQs-Desarrolladores.pdf
+```
+
+**URL que consulta en `www.facturae.gob.es`**, para el correo a Facturae:
+
+```
+https://www.facturae.gob.es/formato/ultima-version
+https://www.facturae.gob.es/content/dam/facturae/formato/versiones/Facturaev3_2.xml
+https://www.facturae.gob.es/content/dam/facturae/formato/versiones/Facturaev3_2_1.xml
+https://www.facturae.gob.es/content/dam/facturae/formato/versiones/Facturaev3_2_2.xml
+https://www.facturae.gob.es/content/dam/facturae/formato/versiones/HistorialVersiones_Facturae_322.pdf
+```
+
+---
+
 ## Antes de enviar cualquiera de ellos
 
 1. **Que el `User-Agent` sea el definitivo.** El correo declara la cadena exacta; si luego
    cambia, el aviso deja de servir para identificarte.
-2. **Que la URL del `User-Agent` responda** y lleve a una página que explique el proyecto.
-   El [README](../../README.md) tiene la sección escrita para eso; lo que falta es
-   publicarlo y que la URL exista.
-3. **Que el número de peticiones del correo sea el real.** Hoy son 7 al día: 5 a
-   `facturae.gob.es` y 2 a `sede.agenciatributaria.gob.es`.
+2. **Que la URL del `User-Agent` responda.** Hecho: el repositorio es público y el README
+   abre con la sección escrita para quien llega desde los registros.
+3. **Que el número de peticiones del correo sea el real.** Ver arriba.
 4. **Guarda la respuesta.** Si alguna vez hay una queja, la conversación previa es la
    diferencia entre un malentendido y un incidente.
