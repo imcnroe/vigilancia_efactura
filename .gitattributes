@@ -1,0 +1,16 @@
+# Finales de linea LF en todo el codigo, tambien en Windows.
+# Sin esto, un checkout en Windows convierte a CRLF y los contenedores Linux se
+# atragantan con los scripts.
+* text=auto eol=lf
+
+# Binarios: que git no los toque.
+*.png binary
+*.jpg binary
+*.pdf binary
+*.zip binary
+*.xlsx binary
+
+# Los XSD descargados de organismos oficiales son artefactos: se guardan tal cual
+# llegan, byte a byte. Alterarles los finales de linea cambia su SHA-256 y rompe la
+# comparacion con el manifiesto.
+tests/fixtures/xsd/* binary
