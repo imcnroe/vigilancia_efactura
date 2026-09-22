@@ -51,6 +51,7 @@ from regwatch.ingest.collectors.base import (
 from regwatch.ingest.collectors.http_file import headers_to_config
 from regwatch.ingest.diff.base import StructuralDiff
 from regwatch.ingest.diff.index_diff import compare_index
+from regwatch.ingest.diff.text_diff import compare_text
 from regwatch.ingest.diff.xsd_diff import compare_xsd
 from regwatch.ingest.models import Artifact, NormalizedForm
 from regwatch.ingest.normalizers.dispatch import (
@@ -62,6 +63,8 @@ from regwatch.ingest.normalizers.dispatch import (
 )
 from regwatch.ingest.normalizers.html_index import PARSER_VERSION as INDEX_PARSER_VERSION
 from regwatch.ingest.normalizers.html_index import IndexForm
+from regwatch.ingest.normalizers.narrative import PARSER_VERSION as TEXT_PARSER_VERSION
+from regwatch.ingest.normalizers.narrative import TextForm
 from regwatch.ingest.normalizers.xsd import PARSER_VERSION, XsdForm
 from regwatch.ingest.schedule import InvalidCronError, next_run
 from regwatch.ingest.storage.artifact_store import ArtifactStore
@@ -176,7 +179,7 @@ class ReprocessReport:
 #: Formas tipadas que se saben comparar. Cada una tiene su detector; mezclarlas no se
 #: intenta, porque una fuente que pasa de servir un XSD a servir un indice ha cambiado
 #: de naturaleza y eso lo mira una persona.
-TypedForm = XsdForm | IndexForm
+TypedForm = XsdForm | IndexForm | TextForm
 
 
 @dataclass(frozen=True, slots=True)
@@ -294,11 +297,15 @@ class IngestService:
                 )
                 if isinstance(outcome, Normalized):
                     report.normalization = outcome.form_type
-                    # Un esquema cuenta elementos y un indice cuenta entradas. Leer
-                    # siempre `elements` daria «0» en todos los indices, que es peor que
-                    # no decir nada: parece que el selector no ha casado.
+                    # Un esquema cuenta elementos, un indice entradas y un documento
+                    # narrativo bloques. Leer siempre `elements` daria «0» en todo lo que
+                    # no fuera un XSD, que es peor que no decir nada: parece que el
+                    # selector no ha casado.
                     report.element_count = len(
-                        outcome.payload.get("elements") or outcome.payload.get("entries") or []
+                        outcome.payload.get("elements")
+                        or outcome.payload.get("entries")
+                        or outcome.payload.get("blocks")
+                        or []
                     )
                     report.declared_version = outcome.declared_version
                     report.is_partial = outcome.is_partial
@@ -578,6 +585,7 @@ class IngestService:
         for form_type, parser_version, load in (
             (FormType.XSD_ELEMENTS.value, PARSER_VERSION, XsdForm.from_json),
             (FormType.INDEX_ENTRIES.value, INDEX_PARSER_VERSION, IndexForm.from_json),
+            (FormType.TEXT_BLOCKS.value, TEXT_PARSER_VERSION, TextForm.from_json),
         ):
             row = session.scalar(
                 select(NormalizedForm).where(
@@ -961,6 +969,8 @@ def _comparable(
         return compare_xsd(before, after), FormType.XSD_ELEMENTS.value, PARSER_VERSION
     if isinstance(before, IndexForm) and isinstance(after, IndexForm):
         return compare_index(before, after), FormType.INDEX_ENTRIES.value, INDEX_PARSER_VERSION
+    if isinstance(before, TextForm) and isinstance(after, TextForm):
+        return compare_text(before, after), FormType.TEXT_BLOCKS.value, TEXT_PARSER_VERSION
     return None
 
 

@@ -275,9 +275,10 @@ def test_every_change_type_has_a_default_severity(change_type: ChangeType) -> No
     entero: un tipo de cambio sin severidad por defecto es un cambio que se emite sin
     clasificar y que nadie prioriza."""
     from regwatch.ingest.diff.index_diff import DEFAULT_SEVERITY as INDEX_SEVERITY
+    from regwatch.ingest.diff.text_diff import DEFAULT_SEVERITY as TEXT_SEVERITY
     from regwatch.ingest.diff.xsd_diff import DEFAULT_SEVERITY
 
-    assert change_type in DEFAULT_SEVERITY | INDEX_SEVERITY
+    assert change_type in DEFAULT_SEVERITY | INDEX_SEVERITY | TEXT_SEVERITY
 
 
 # -- campos obligatorios dentro de una rama nueva y opcional --------------------

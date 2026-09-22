@@ -103,7 +103,7 @@ def test_broken_xml_does_not_raise() -> None:
     assert isinstance(outcome, NotNormalizable)
 
 
-@pytest.mark.parametrize("kind", [SourceKind.NARRATIVE, "SANDBOX"])
+@pytest.mark.parametrize("kind", ["SANDBOX"])
 def test_other_source_kinds_have_no_normalizer_yet(kind: str) -> None:
     outcome = normalize_content(kind, XSD)
     assert isinstance(outcome, NotNormalizable)

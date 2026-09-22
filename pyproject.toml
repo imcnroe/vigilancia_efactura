@@ -10,6 +10,9 @@ dependencies = [
     "pydantic>=2.7",
     "pydantic-settings>=2.2",
     "lxml>=5.2",
+    # Python puro y sin dependencias del sistema: el proyecto tiene que arrancar igual
+    # en un portatil con Windows y en un contenedor Linux.
+    "pypdf>=5.1",
     "httpx>=0.27",
     "tenacity>=8.3",
     "boto3>=1.34",

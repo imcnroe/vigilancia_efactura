@@ -71,7 +71,7 @@ make install                  # dependencias del proyecto y de desarrollo
 cp .env.example .env          # rellenar COLLECTOR_USER_AGENT antes de salir a la red
 make up                       # PostgreSQL 16 y MinIO en contenedores
 make migrate                  # aplica las migraciones
-make test                     # 144 unitarios + 42 de integración
+make test                     # 169 unitarios + 44 de integración
 make lint                     # ruff y mypy en modo estricto
 ```
 
@@ -150,8 +150,10 @@ versión, que es exactamente el suceso que este producto existe para detectar.
 | CLI: `source` y `collect` | hecho |
 | Migración semilla con planes y jurisdicciones | hecho |
 | Colector `HTTP_HTML_INDEX` y normalizador `INDEX_ENTRIES` | hecho |
+| Normalizador de texto narrativo (PDF y HTML) `TEXT_BLOCKS` | hecho |
 | Captura real de las fuentes del criterio de fase | hecho, 7 fuentes de dos organismos |
-| `COLLECTOR_USER_AGENT` con contacto real | **pendiente**, y bloquea la vigilancia desatendida |
+| `COLLECTOR_USER_AGENT` con contacto real | hecho |
+| Aviso previo a los organismos | **pendiente**, y va antes de poner el cron |
 
 **El criterio de la fase 1 está demostrado.** Siete fuentes reales dadas de alta, sus
 siete artefactos capturados de `facturae.gob.es` y de `sede.agenciatributaria.gob.es`, y
@@ -164,11 +166,14 @@ bytes de verdad del organismo**: una fuente que servía Facturae 3.2.1 pasa a se
 y el `change_event` que queda en la base trae los cinco cambios del listado oficial con su
 clasificación intacta ([`test_ingest_service.py`](tests/integration/test_ingest_service.py)).
 
-Lo que queda pendiente es el `COLLECTOR_USER_AGENT`. Las capturas hechas hasta ahora han
-ido por `COLLECTOR_ALLOW_ANONYMOUS=true`, la vía explícita de desarrollo supervisado: deja
-un aviso en el log en cada uso y no sirve para saltarse el `TODO_VERIFICAR`. **Antes de
-poner el cron a correr solo hace falta un buzón de contacto real**, que es cuando el
-apartado 7.1 empieza a importar de verdad.
+Los cuatro documentos narrativos del catálogo —los historiales de versiones y la FAQ de
+desarrolladores— ya se comparan. La FAQ de la AEAT da 336 bloques de texto de sus 52
+páginas y 19 apartados reconocidos, y el historial de Facturae 62 bloques de 4 páginas.
+Antes de esto se capturaban enteros pero cualquier cambio en ellos llegaba como «el hash
+cambió», que obliga a leerse el documento para saber qué pasó.
+
+Lo que queda pendiente no es código: **avisar a los organismos antes de poner el cron a
+correr solo**. Los correos están en [`docs/_correos/`](docs/_correos/).
 
 ### El catálogo semilla
 
@@ -282,6 +287,30 @@ ella: lo dice en las notas y ya.
 columna. Las altas y bajas son `REQUIRES_CHANGE`, no porque rompan nada todavía, sino
 porque alguien tiene que mirarlas; retitular un enlace es `INFO`.
 
+**La identidad de un bloque de texto es su propio texto.** Un XSD se empareja por ruta
+canónica; un documento narrativo no tiene nada equivalente, y compararlo por posición
+haría que insertar un párrafo en la página 3 marcara como modificado todo lo que va
+detrás. Con el texto como clave, mover un apartado de sitio no emite nada. Lo que queda
+sin pareja exacta se alinea con `difflib`, que es determinista, y solo entonces se decide
+si fue una reescritura o un alta más una baja.
+
+**En un documento narrativo, lo que sube la severidad son las cifras.** Un bloque
+reescrito con los mismos números es `INFO` —una corrección de estilo—; si los números
+cambian, es `REQUIRES_CHANGE` y van en el detalle, porque en un texto normativo un número
+que cambia suele ser una fecha de entrada en vigor, un plazo o un importe. Es una
+heurística explícita, marcada en `detail.reason`, y **tiene un punto ciego conocido y
+probado**: un plazo escrito en letra («cuatro días» pasa a «ocho días») se emite pero no
+sube de `INFO`. Perseguirlo exigiría entender castellano y francés, y un detector que casi
+entiende es peor que uno que dice hasta dónde llega.
+
+**Los encabezados y pies de página se reconocen ignorando las cifras y mirando solo los
+bordes de la página.** El pie de la FAQ de la AEAT es `<número de página> 4 de diciembre
+de 2025`: distinto en cada una de sus 52 páginas y, aun así, la misma línea. Sin
+enmascarar los dígitos entraban los 52 como contenido, y además la numeración inicial los
+hacía pasar por títulos de apartado. Mirar solo las dos primeras y dos últimas líneas
+evita descartar una fila de tabla que se repita con un número distinto, que sí es
+contenido.
+
 **`source.next_check_at`, columna nueva.** El cron no se puede evaluar en SQL, así que
 `collect run-due` necesita la próxima ejecución materializada. Se recalcula al terminar
 cada pasada.
@@ -369,12 +398,11 @@ catálogo con sus nueve entradas. Aun así conviene escribir a la AEAT identific
 `User-Agent` y pedir acceso al portal de desarrolladores: es la familia normativa con más
 valor comercial y depender de una sola vía es frágil.
 
-**`COLLECTOR_USER_AGENT`.** Sigue sin datos de contacto. Las capturas hechas hasta hoy han
-ido por `COLLECTOR_ALLOW_ANONYMOUS=true`, que es la vía de desarrollo supervisado y deja
-aviso en el log en cada uso. **No sirve para la vigilancia diaria desatendida**, que es
-para lo que existe la exigencia del apartado 7.1: un cron que baja ficheros todas las
-mañanas sin que nadie mire es lo que alguien puede querer parar, y para eso necesita saber
-a quién escribir. Hace falta un buzón —o una URL— antes de poner el cron.
+**Avisar a los organismos antes de poner el cron.** El `User-Agent` ya identifica y esta
+página explica el programa, pero nadie se lo ha dicho a nadie todavía. Los correos están
+redactados en [`docs/_correos/`](docs/_correos/), con los destinatarios y su nivel de
+evidencia. Un aviso previo convierte un bot desconocido en una petición razonable a la que
+alguien puede decir que no; uno posterior es una disculpa.
 
 **Fuentes de nivel B y C.** El catálogo semilla
 ([`docs/catalogo-fuentes-semilla.md`](docs/catalogo-fuentes-semilla.md)) marca qué URLs
@@ -396,19 +424,13 @@ de dar por buena la simplificación.
 
 La fase 1 está cerrada. Lo que viene, en orden:
 
-1. **Un buzón de contacto para `COLLECTOR_USER_AGENT`** y el cron en marcha. Es lo único
-   que separa la vigilancia manual supervisada de la vigilancia de verdad, y es una
-   decisión de negocio, no de código: vale un alias de equipo.
-2. **Normalizador de texto narrativo (PDF y HTML).** Cuatro de las siete fuentes del
-   catálogo son documentos narrativos —historiales de versiones, FAQ de desarrolladores—
-   y hoy se capturan enteras pero no se comparan: cualquier cambio en ellas llega como
-   solo-hash. Es lo que el analista de la fase 2 necesita para citar fechas de entrada en
-   vigor.
-3. **Normalizador de contenedores ZIP.** Lo necesitan el paquete francés de la DGFiP y los
+1. **Enviar los avisos y poner el cron en marcha.** Es lo único que separa la vigilancia
+   manual supervisada de la vigilancia de verdad, y no es trabajo de código.
+2. **Normalizador de contenedores ZIP.** Lo necesitan el paquete francés de la DGFiP y los
    esquemas de TicketBAI. El artefacto sigue siendo el ZIP íntegro —es lo que publica el
    organismo— y cada XSD interno genera su propia `normalized_form` con el `path` dentro
    del ZIP como parte de la clave; la columna `inner_path` ya existe para eso.
-4. **Afinar la extracción de versión del índice de Facturae.** El `version_pattern` actual
+3. **Afinar la extracción de versión del índice de Facturae.** El `version_pattern` actual
    lee `v3_2_1` del nombre del fichero, pero los historiales se llaman `_321.pdf` y se
    quedan sin versión. Funciona, y es configuración de la fuente: se arregla sin tocar
    código.

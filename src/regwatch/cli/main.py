@@ -462,9 +462,10 @@ def source_test(ref: str = typer.Argument(..., help=REF_HELP)) -> None:
             typer.echo(f"frente al ultimo   {same[report.matches_latest_artifact]}")
             typer.echo(f"normalizacion      {report.normalization}")
             if report.element_count is not None:
-                unit = (
-                    "entradas " if report.normalization == FormType.INDEX_ENTRIES else "elementos"
-                )
+                unit = {
+                    FormType.INDEX_ENTRIES.value: "entradas ",
+                    FormType.TEXT_BLOCKS.value: "bloques  ",
+                }.get(report.normalization, "elementos")
                 typer.echo(
                     f"{unit}          {report.element_count}  "
                     f"version declarada={report.declared_version or '-'}  "

@@ -93,6 +93,13 @@ class ChangeType(DomainEnum):
     INDEX_ENTRY_REMOVED = "INDEX_ENTRY_REMOVED"
     INDEX_ENTRY_UPDATED = "INDEX_ENTRY_UPDATED"
 
+    # Documentos narrativos: guias, FAQ, historiales de versiones. No describen una
+    # estructura sino una redaccion, y la mayoria de sus cambios no obligan a nadie a
+    # nada. Tambien viven en el JSONB.
+    TEXT_BLOCK_ADDED = "TEXT_BLOCK_ADDED"
+    TEXT_BLOCK_REMOVED = "TEXT_BLOCK_REMOVED"
+    TEXT_BLOCK_CHANGED = "TEXT_BLOCK_CHANGED"
+
 
 class UserRole(DomainEnum):
     OWNER = "OWNER"

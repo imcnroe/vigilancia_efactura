@@ -16,6 +16,7 @@ from typing import Any, Literal
 
 from regwatch.core.enums import FormType, SourceKind
 from regwatch.ingest.normalizers.html_index import IndexForm, normalize_html_index
+from regwatch.ingest.normalizers.narrative import TextForm, normalize_narrative
 from regwatch.ingest.normalizers.xsd import XsdForm, normalize_xsd
 
 ContentKind = Literal["zip", "pdf", "html", "xml", "text", "binary"]
@@ -37,11 +38,12 @@ class Normalized:
     #: La forma tipada, para comparar sin volver a leer el payload. No se persiste.
     xsd_form: XsdForm | None = None
     index_form: IndexForm | None = None
+    text_form: TextForm | None = None
 
     @property
-    def typed_form(self) -> XsdForm | IndexForm | None:
+    def typed_form(self) -> XsdForm | IndexForm | TextForm | None:
         """La forma tipada, sea del tipo que sea. Quien compara no elige por atributo."""
-        return self.xsd_form or self.index_form
+        return self.xsd_form or self.index_form or self.text_form
 
     def parse_warnings(self) -> dict[str, Any] | None:
         """Lo que va a la columna `parse_warnings`. Nulo si no hay nada que contar."""
@@ -101,10 +103,32 @@ def normalize_content(
     if source_kind == SourceKind.SCHEMA:
         return _normalize_schema(content, dependencies)
     if source_kind == SourceKind.NARRATIVE:
-        return NotNormalizable("normalizador de texto narrativo (PDF/HTML) pendiente: fase 2")
+        return _normalize_narrative(content, config)
     if source_kind == SourceKind.INDEX:
         return _normalize_index(content, base_url, config)
     return NotNormalizable(f"sin normalizador para source_kind={source_kind!r}")
+
+
+def _normalize_narrative(content: bytes, config: dict[str, Any] | None) -> NormalizationOutcome:
+    kind = sniff(content)
+    if kind not in ("pdf", "html", "xml"):
+        return NotNormalizable(f"contenido {kind}: no es un documento de texto legible")
+
+    try:
+        form = normalize_narrative(content, kind, config)
+    except ValueError as error:
+        return NotNormalizable(str(error))
+
+    return Normalized(
+        form_type=FormType.TEXT_BLOCKS.value,
+        payload=form.to_json(),
+        parser_version=form.parser_version,
+        is_partial=form.is_partial,
+        declared_version=form.declared_version,
+        warnings=list(form.warnings),
+        missing_dependencies=list(form.missing_dependencies),
+        text_form=form,
+    )
 
 
 def _normalize_index(

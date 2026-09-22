@@ -904,6 +904,81 @@ def test_a_cosmetic_edit_of_the_index_is_not_a_publication(
     assert report.max_severity == Severity.INFO
 
 
+# -- documentos narrativos -------------------------------------------------------
+
+
+NARRATIVE_URL = "https://portal.example.org/guias/faq-desarrolladores.html"
+
+
+def guide(plazo: str, extra: str = "") -> bytes:
+    return f"""<!DOCTYPE html>
+<html><body>
+  <h2>4.2 Plazo de remision</h2>
+  <p>El plazo de remision sera de {plazo} dias naturales desde la expedicion.</p>
+  <p>Los registros se encadenan mediante la huella del anterior.</p>
+  {extra}
+</body></html>""".encode()
+
+
+def test_a_figure_that_changes_in_a_guide_reaches_the_change_event(
+    service: IngestService,
+    session_factory: sessionmaker[Session],
+    server: FakeServer,
+    clock: FakeClock,
+) -> None:
+    """Antes, cualquier cambio en un PDF o una guia llegaba como «el hash cambio» y
+    alguien tenia que leerse el documento entero. Ahora queda acotado al parrafo, y las
+    cifras van en el detalle porque son lo que distingue una errata de un plazo nuevo.
+    """
+    server.set(NARRATIVE_URL, guide("4"), headers=HTML_HEADERS)
+    source_id = seed_source(session_factory, NARRATIVE_URL, kind="NARRATIVE")
+    service.run_source(source_id)
+
+    server.set(NARRATIVE_URL, guide("8"), headers=HTML_HEADERS)
+    clock.advance(days=1)
+    report = service.run_source(source_id)
+
+    assert report.status is RunStatus.NEW_ARTIFACT
+    assert not any("sin normalizar" in warning for warning in report.warnings)
+
+    _, current = artifacts_of(session_factory, source_id)
+    (form,) = forms_of(session_factory, current.id)
+    assert form.form_type == FormType.TEXT_BLOCKS
+
+    (event,) = events_of(session_factory, source_id)
+    assert event.structural_diff["comparison"] == FormType.TEXT_BLOCKS
+    (item,) = event.structural_diff["items"]
+    assert item["type"] == ChangeType.TEXT_BLOCK_CHANGED
+    assert item["detail"]["section"] == "4.2 Plazo de remision"
+    assert item["severity"] == Severity.REQUIRES_CHANGE
+
+
+def test_adding_a_paragraph_to_a_guide_does_not_raise_the_alarm(
+    service: IngestService,
+    session_factory: sessionmaker[Session],
+    server: FakeServer,
+    clock: FakeClock,
+) -> None:
+    """Ampliar una guia es lo mas normal del mundo. Queda registrado y acotado, pero no
+    es una obligacion nueva mientras nadie lo lea."""
+    server.set(NARRATIVE_URL, guide("4"), headers=HTML_HEADERS)
+    source_id = seed_source(session_factory, NARRATIVE_URL, kind="NARRATIVE")
+    service.run_source(source_id)
+
+    server.set(
+        NARRATIVE_URL,
+        guide("4", extra="<p>Se aclara que los albaranes no son facturas.</p>"),
+        headers=HTML_HEADERS,
+    )
+    clock.advance(days=1)
+    report = service.run_source(source_id)
+
+    (event,) = events_of(session_factory, source_id)
+    (item,) = event.structural_diff["items"]
+    assert item["type"] == ChangeType.TEXT_BLOCK_ADDED
+    assert report.max_severity == Severity.INFO
+
+
 # -- la fase 1 de punta a punta, con los bytes reales del organismo ---------------
 
 
